@@ -1,0 +1,114 @@
+"use client";
+
+import { useState } from "react";
+import { Supplier, tierLabel } from "@/lib/suppliers";
+
+interface DetailPanelProps {
+  supplier: Supplier | null;
+}
+
+function trendArrow(t: Supplier["tierTrend"]) {
+  if (t === "down") return <span className="tier-arrow" style={{ color: "var(--brick)" }}>▼</span>;
+  if (t === "up") return <span className="tier-arrow" style={{ color: "var(--sage)" }}>▲</span>;
+  return null;
+}
+
+const STANDARD_TAGS = [
+  "ZDHC InCheck", "ZDHC ClearStream", "MRSL v3", "AWS Standard v2", "Higg FEM", "WRI Aqueduct", "GRI 303",
+];
+
+export default function DetailPanel({ supplier }: DetailPanelProps) {
+  const [availOpen, setAvailOpen] = useState(false);
+  const [qualityOpen, setQualityOpen] = useState(false);
+
+  if (!supplier) {
+    return (
+      <aside className="detail">
+        <div className="detail-empty">Select a supplier from the<br />table to view its full profile,<br />PWI breakdown and audit trail.</div>
+      </aside>
+    );
+  }
+
+  const s = supplier;
+
+  return (
+    <aside className="detail">
+      <div className="d-head">
+        <div className="d-name">{s.name}</div>
+        <div className="d-loc">{s.loc} · {s.basin}</div>
+      </div>
+
+      <div className="d-section">
+        <div className="d-section-title">Compliance status</div>
+        <div className="d-row"><span className="k">MRSL conformance</span><span className="v">{s.tier} ({tierLabel(s.tier)}) {trendArrow(s.tierTrend)}</span></div>
+        <div className="d-row"><span className="k">AWS certification</span><span className="v">{s.aws}</span></div>
+        <div className="d-row"><span className="k">Higg FEM score</span><span className="v">{s.higg} <span style={{ color: "var(--text-faint)" }}>(peer avg {s.higgAvg})</span></span></div>
+        <div className="d-row"><span className="k">Basin risk (WRI Aqueduct)</span><span className="v">{s.riskScore} / 5</span></div>
+        <div className="d-row"><span className="k">Last audit</span><span className="v">{s.auditDate}</span></div>
+        <div className="d-row"><span className="k">Auditor</span><span className="v">{s.auditor}</span></div>
+      </div>
+
+      <div className="d-section">
+        <div className="d-section-title">Water balance</div>
+        <div className="d-row"><span className="k">Withdrawal</span><span className="v">{s.withdrawal}</span></div>
+        <div className="d-row"><span className="k">Discharge</span><span className="v">{s.discharge}</span></div>
+        <div className="d-row"><span className="k">Reuse rate</span><span className="v">{s.reuse}%</span></div>
+      </div>
+
+      <div className="d-section">
+        <div className="d-section-title">PWI contribution (WQBA output)</div>
+
+        <div className="pwi-card">
+          <div className="pwi-top"><span className="pwi-name">Availability</span><span className="pwi-val">{s.pwiAvail}</span></div>
+          <div className="pwi-conf">confidence {s.pwiConf}</div>
+          <button type="button" className="audit-toggle" onClick={() => setAvailOpen((o) => !o)}>
+            {availOpen ? "▾ hide audit trail" : "▸ view audit trail"}
+          </button>
+          <div className={`audit-trail${availOpen ? " open" : ""}`}>
+            source: WQBA engine v2.1 · formula: (Δ withdrawal × basin scarcity multiplier)<br />
+            input: withdrawal baseline vs current period · verification: {s.auditor}
+          </div>
+        </div>
+
+        <div className="pwi-card">
+          <div className="pwi-top"><span className="pwi-name">Quality</span><span className="pwi-val">{s.pwiQuality}</span></div>
+          <div className="pwi-conf">confidence {s.pwiQConf}</div>
+          <button type="button" className="audit-toggle" onClick={() => setQualityOpen((o) => !o)}>
+            {qualityOpen ? "▾ hide audit trail" : "▸ view audit trail"}
+          </button>
+          <div className={`audit-trail${qualityOpen ? " open" : ""}`}>
+            source: WQBA engine v2.1 · formula: (Δ pollutant load × receiving-water baseline factor)<br />
+            params: BOD, COD, TSS, AOX · verification: {s.auditor}
+          </div>
+        </div>
+
+        <div className="pwi-card">
+          <div className="pwi-top"><span className="pwi-name">Access</span><span className="pwi-val">{s.pwiAccess}</span></div>
+        </div>
+      </div>
+
+      <div className="d-section">
+        <div className="d-section-title">Open alerts</div>
+        {s.alerts.length ? (
+          s.alerts.map((a, i) => (
+            <div className="alert-item" key={i}>
+              <div className="a-title">{a.title}</div>
+              <div className="a-meta">{a.meta}</div>
+            </div>
+          ))
+        ) : (
+          <div style={{ color: "var(--text-faint)", fontSize: "12px" }}>No open alerts.</div>
+        )}
+      </div>
+
+      <div className="d-section">
+        <div className="d-section-title">Standards referenced</div>
+        <div className="std-tags">
+          {STANDARD_TAGS.map((tag) => (
+            <span className="std-tag" key={tag}>{tag}</span>
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+}
