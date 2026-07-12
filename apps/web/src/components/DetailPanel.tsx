@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Supplier, tierLabel } from "@/lib/suppliers";
+import { Supplier, tierLabel, healthBadgeClass, PlantHealth } from "@/lib/suppliers";
 
 interface DetailPanelProps {
   supplier: Supplier | null;
@@ -17,9 +17,18 @@ const STANDARD_TAGS = [
   "ZDHC InCheck", "ZDHC ClearStream", "MRSL v3", "AWS Standard v2", "Higg FEM", "WRI Aqueduct", "GRI 303",
 ];
 
+const HEALTH_COMPONENT_LABELS: Record<keyof PlantHealth["breakdown"], string> = {
+  complianceBase: "Compliance base (MRSL tier)",
+  trajectory: "Trajectory (tier trend)",
+  alertBurden: "Alert burden",
+  governance: "Governance maturity (AWS)",
+  peerRelative: "Peer-relative Higg performance",
+};
+
 export default function DetailPanel({ supplier }: DetailPanelProps) {
   const [availOpen, setAvailOpen] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
+  const [healthOpen, setHealthOpen] = useState(false);
 
   if (!supplier) {
     return (
@@ -36,6 +45,48 @@ export default function DetailPanel({ supplier }: DetailPanelProps) {
       <div className="d-head">
         <div className="d-name">{s.name}</div>
         <div className="d-loc">{s.loc} · {s.basin}</div>
+      </div>
+
+      <div className="d-section">
+        <div className="d-section-title">Plant Health</div>
+        <div className="d-row">
+          <span className="k">Overall status</span>
+          <span className="v">
+            <span className={`health-badge ${healthBadgeClass(s.health.band)}`}>{s.health.band}</span>
+          </span>
+        </div>
+        <div className="d-row">
+          <span className="k">Score</span>
+          <span className="v">{s.health.score} / 100{s.health.trustCapApplied && (
+            <span style={{ color: "var(--text-faint)" }}> (self-reported, capped)</span>
+          )}</span>
+        </div>
+
+        {s.health.hardFailReason && (
+          <div className="alert-item" style={{ marginTop: 8 }}>
+            <div className="a-title">Forced to Critical</div>
+            <div className="a-meta">{s.health.hardFailReason}</div>
+          </div>
+        )}
+
+        <button type="button" className="audit-toggle" onClick={() => setHealthOpen((o) => !o)}>
+          {healthOpen ? "▾ hide score breakdown" : "▸ view score breakdown"}
+        </button>
+        <div className={`audit-trail${healthOpen ? " open" : ""}`}>
+          {(Object.keys(s.health.breakdown) as (keyof PlantHealth["breakdown"])[]).map((key) => {
+            const component = s.health.breakdown[key];
+            return (
+              <div key={key} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span>{HEALTH_COMPONENT_LABELS[key]}</span>
+                <span>
+                  {component.value.toFixed(1)} × {component.weight} = {component.contribution.toFixed(1)}
+                </span>
+              </div>
+            );
+          })}
+          <br />
+          trust cap applied: {s.health.trustCapApplied ? "yes (self-reported data capped at 70)" : "no"}
+        </div>
       </div>
 
       <div className="d-section">

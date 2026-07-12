@@ -2,11 +2,52 @@ export type RiskLevel = "high" | "med" | "low";
 export type TierTrend = "up" | "down" | "flat";
 export type Tier = "Level 1" | "Level 2" | "Level 3";
 export type AwsCert = "Uncertified" | "Core" | "Gold" | "Platinum";
+export type AlertSeverity = "Critical" | "Major" | "Minor";
 
 export interface SupplierAlert {
   id: string;
   title: string;
   meta: string;
+  severity: AlertSeverity;
+  type: string;
+  createdAt: string;
+}
+
+/** Mirrors the API's PlantHealthResult (apps/api/src/app/suppliers/plant-health.util.ts). */
+export type PlantHealthBand = "Healthy" | "Watch" | "At Risk" | "Critical";
+
+export interface PlantHealthComponent {
+  value: number;
+  weight: number;
+  contribution: number;
+}
+
+export interface PlantHealth {
+  score: number;
+  band: PlantHealthBand;
+  hardFailReason: string | null;
+  trustCapApplied: boolean;
+  breakdown: {
+    complianceBase: PlantHealthComponent;
+    trajectory: PlantHealthComponent;
+    alertBurden: PlantHealthComponent;
+    governance: PlantHealthComponent;
+    peerRelative: PlantHealthComponent;
+  };
+}
+
+export const HEALTH_BAND_ORDER: Record<PlantHealthBand, number> = {
+  Critical: 0,
+  "At Risk": 1,
+  Watch: 2,
+  Healthy: 3,
+};
+
+export function healthBadgeClass(band: PlantHealthBand): string {
+  if (band === "Healthy") return "health-healthy";
+  if (band === "Watch") return "health-watch";
+  if (band === "At Risk") return "health-at-risk";
+  return "health-critical";
 }
 
 export interface Supplier {
@@ -38,6 +79,7 @@ export interface Supplier {
   basin: string;
   auditDate: string;
   auditor: string;
+  health: PlantHealth;
 }
 
 /** Fields a supplier may edit on their own profile — mirrors the API's UpdateOwnSupplierDto. */

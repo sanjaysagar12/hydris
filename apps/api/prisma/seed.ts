@@ -10,12 +10,22 @@ function slugEmail(name: string) {
   return `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}@example.com`;
 }
 
+// Fixed reference date so seeded alert ages (and therefore Plant Health
+// scores — see suppliers/plant-health.util.ts) are reproducible, matching
+// the fixed illustrative auditDate strings already used below.
+const SEED_TODAY = new Date('2026-07-12T00:00:00Z');
+function daysAgo(n: number): Date {
+  return new Date(SEED_TODAY.getTime() - n * 24 * 60 * 60 * 1000);
+}
+
 const suppliers = [
   {
     name: 'Anchor Dye Works', loc: 'Tirupur, India', region: 'India', risk: 'high', riskScore: '4.2', riskSrc: 'WRI Aqueduct',
     tier: 'Level 2', tierTrend: 'down', tierFrom: 'Level 3', aws: 'Core', higg: 68, higgAvg: 61,
     pwiQuality: '+0.31 idx', pwiQConf: '±10%', pwiAccess: 'Not assessed',
-    alerts: [{ title: 'MRSL chemical flag — InCheck', meta: 'Restricted azo dye detected, lot #2291 · 3 days open' }],
+    alerts: [
+      { title: 'MRSL chemical flag — InCheck', meta: 'Restricted azo dye detected, lot #2291 · 3 days open', severity: 'Major', type: 'chemical_exceedance', createdAt: daysAgo(3) },
+    ],
     withdrawalLpd: 820_000, dischargeLpd: 540_000, reuseVolumeLpd: 336_200,
     basin: 'Noyyal sub-basin', auditDate: '12 Jun 2026', auditor: 'Bureau Veritas (3rd-party)',
   },
@@ -24,8 +34,8 @@ const suppliers = [
     tier: 'Level 1', tierTrend: 'down', tierFrom: 'Level 2', aws: 'Uncertified', higg: 52, higgAvg: 58,
     pwiQuality: '-0.08 idx', pwiQConf: '±22%', pwiAccess: 'Not assessed',
     alerts: [
-      { title: 'Tier downgrade — ClearStream', meta: 'BOD exceeded limit by 30 mg/L · audit 04 Jul 2026' },
-      { title: 'Certification expiring', meta: 'ZDHC InCheck valid until 02 Aug 2026 (29 days)' },
+      { title: 'Tier downgrade — ClearStream', meta: 'BOD exceeded limit by 30 mg/L · audit 04 Jul 2026', severity: 'Major', type: 'chemical_exceedance', createdAt: daysAgo(8) },
+      { title: 'Certification expiring', meta: 'ZDHC InCheck valid until 02 Aug 2026 (29 days)', severity: 'Minor', type: 'permit_expiry', createdAt: daysAgo(0) },
     ],
     withdrawalLpd: 1_150_000, dischargeLpd: 980_000, reuseVolumeLpd: 207_000,
     basin: 'Buriganga basin', auditDate: '04 Jul 2026', auditor: 'Self-reported',
@@ -42,7 +52,9 @@ const suppliers = [
     name: 'Marmara Weaving', loc: 'Bursa, Turkey', region: 'Turkey', risk: 'med', riskScore: '2.8', riskSrc: 'WRI Aqueduct',
     tier: 'Level 2', tierTrend: 'flat', tierFrom: 'Level 2', aws: 'Core', higg: 64, higgAvg: 60,
     pwiQuality: '+0.12 idx', pwiQConf: '±14%', pwiAccess: 'Not assessed',
-    alerts: [{ title: 'Permit renewal due', meta: 'Groundwater extraction license · 41 days remaining' }],
+    alerts: [
+      { title: 'Permit renewal due', meta: 'Groundwater extraction license · 41 days remaining', severity: 'Minor', type: 'permit_expiry', createdAt: daysAgo(0) },
+    ],
     withdrawalLpd: 410_000, dischargeLpd: 300_000, reuseVolumeLpd: 143_500,
     basin: 'Nilüfer basin', auditDate: '18 Jun 2026', auditor: 'Intertek (3rd-party)',
   },
@@ -59,8 +71,8 @@ const suppliers = [
     tier: 'Level 1', tierTrend: 'flat', tierFrom: 'Level 1', aws: 'Uncertified', higg: 44, higgAvg: 61,
     pwiQuality: '-0.19 idx', pwiQConf: '±30%', pwiAccess: 'Not assessed',
     alerts: [
-      { title: 'MRSL chemical flag — InCheck', meta: 'Heavy metal (Cr VI) above threshold · 11 days open' },
-      { title: 'Tier downgrade — ClearStream', meta: 'Discharge/withdrawal mismatch flagged as anomaly' },
+      { title: 'MRSL chemical flag — InCheck', meta: 'Heavy metal (Cr VI) above threshold · 11 days open', severity: 'Critical', type: 'chemical_exceedance', createdAt: daysAgo(11) },
+      { title: 'Tier downgrade — ClearStream', meta: 'Discharge/withdrawal mismatch flagged as anomaly', severity: 'Major', type: 'data_anomaly', createdAt: daysAgo(11) },
     ],
     withdrawalLpd: 960_000, dischargeLpd: 890_000, reuseVolumeLpd: 115_200,
     basin: 'Ganga basin (Kanpur stretch)', auditDate: '30 Jun 2026', auditor: 'Self-reported',

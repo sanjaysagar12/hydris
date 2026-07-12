@@ -1,11 +1,15 @@
 "use client";
 
-import { Supplier, tierClass } from "@/lib/suppliers";
+import { Supplier, tierClass, healthBadgeClass } from "@/lib/suppliers";
+
+export type HealthSortDir = "asc" | "desc";
 
 interface SupplierTableProps {
   suppliers: Supplier[];
   selected: Supplier | null;
   onSelect: (s: Supplier) => void;
+  healthSortDir: HealthSortDir | null;
+  onToggleHealthSort: () => void;
 }
 
 function riskDot(r: Supplier["risk"]) {
@@ -18,13 +22,21 @@ function trendArrow(t: Supplier["tierTrend"]) {
   return null;
 }
 
-export default function SupplierTable({ suppliers, selected, onSelect }: SupplierTableProps) {
+function sortIndicator(dir: HealthSortDir | null) {
+  if (!dir) return null;
+  return <span style={{ marginLeft: 4 }}>{dir === "asc" ? "▲" : "▼"}</span>;
+}
+
+export default function SupplierTable({ suppliers, selected, onSelect, healthSortDir, onToggleHealthSort }: SupplierTableProps) {
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
             <th>Supplier</th>
+            <th onClick={onToggleHealthSort} title="Sort by Plant Health score">
+              Health{sortIndicator(healthSortDir)}
+            </th>
             <th>Region</th>
             <th>Basin risk ⓘ</th>
             <th>MRSL tier</th>
@@ -38,7 +50,7 @@ export default function SupplierTable({ suppliers, selected, onSelect }: Supplie
         <tbody>
           {suppliers.length === 0 && (
             <tr>
-              <td colSpan={9} className="empty-row">No suppliers match the current filters.</td>
+              <td colSpan={10} className="empty-row">No suppliers match the current filters.</td>
             </tr>
           )}
           {suppliers.map((s) => (
@@ -50,6 +62,11 @@ export default function SupplierTable({ suppliers, selected, onSelect }: Supplie
               <td>
                 <div className="sup-name">{s.name}</div>
                 <div className="sup-loc">{s.loc}</div>
+              </td>
+              <td>
+                <span className={`health-badge ${healthBadgeClass(s.health.band)}`}>
+                  {s.health.band}
+                </span>
               </td>
               <td>{s.region}</td>
               <td>

@@ -1,4 +1,4 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateAlertDto {
   @IsString()
@@ -8,4 +8,12 @@ export class CreateAlertDto {
   @IsString()
   @MinLength(1)
   meta: string;
+
+  @IsOptional()
+  @IsIn(['Critical', 'Major', 'Minor'])
+  severity?: string;
+
+  @IsOptional()
+  @IsString()
+  type?: string;
 }

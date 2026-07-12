@@ -4,9 +4,17 @@ import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { UpdateOwnSupplierDto } from './dto/update-own-supplier.dto';
 import { CreateAlertDto } from './dto/create-alert.dto';
 import { computeWaterQuality, formatLpd } from './water-quality.util';
+import {
+  computePlantHealth,
+  deriveVerificationSource,
+  AlertSeverity,
+  MrslTier,
+  TierTrend,
+  AwsStatus,
+} from './plant-health.util';
 
 const SAFE_INCLUDE = {
-  alerts: { select: { id: true, title: true, meta: true } },
+  alerts: { select: { id: true, title: true, meta: true, severity: true, type: true, createdAt: true } },
 } as const;
 
 type SupplierWithAlerts = NonNullable<Awaited<ReturnType<SuppliersService['findRawById']>>>;
@@ -16,9 +24,20 @@ export class SuppliersService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Adds display-formatted / derived fields on top of the raw DB record. */
-  private present<T extends { withdrawalLpd: number; dischargeLpd: number; reuseVolumeLpd: number }>(
-    supplier: T,
-  ) {
+  private present<
+    T extends {
+      withdrawalLpd: number;
+      dischargeLpd: number;
+      reuseVolumeLpd: number;
+      tier: string;
+      tierTrend: string;
+      aws: string;
+      higg: number;
+      higgAvg: number;
+      auditor: string;
+      alerts: { severity: string; type: string; createdAt: Date }[];
+    },
+  >(supplier: T) {
     return {
       ...supplier,
       withdrawal: formatLpd(supplier.withdrawalLpd),
@@ -27,6 +46,22 @@ export class SuppliersService {
         supplier.withdrawalLpd > 0
           ? Math.round((supplier.reuseVolumeLpd / supplier.withdrawalLpd) * 100)
           : 0,
+      health: computePlantHealth(
+        {
+          tier: supplier.tier as MrslTier,
+          tierTrend: supplier.tierTrend as TierTrend,
+          aws: supplier.aws as AwsStatus,
+          higg: supplier.higg,
+          higgPeerAvg: supplier.higgAvg,
+          verificationSource: deriveVerificationSource(supplier.auditor),
+          alerts: supplier.alerts.map((a) => ({
+            severity: a.severity as AlertSeverity,
+            type: a.type,
+            openedAt: a.createdAt,
+          })),
+        },
+        new Date(),
+      ),
     };
   }
 

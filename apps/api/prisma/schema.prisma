@@ -52,10 +52,15 @@ model Supplier {
 }
 
 model SupplierAlert {
-  id         String   @id @default(cuid())
-  title      String
-  meta       String
-  createdAt  DateTime @default(now())
+  id     String @id @default(cuid())
+  title  String
+  meta   String
+
+  // Inputs to the Plant Health score (see suppliers/plant-health.util.ts).
+  severity String @default("Minor") // "Critical" | "Major" | "Minor"
+  type     String @default("other") // e.g. "chemical_exceedance" | "data_anomaly" | "enforcement_action" | "permit_expiry"
+
+  createdAt  DateTime @default(now()) // == "openedAt" for health scoring purposes
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   supplierId String
 }

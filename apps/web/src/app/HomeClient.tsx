@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import KpiRow from "@/components/KpiRow";
-import SupplierTable from "@/components/SupplierTable";
+import SupplierTable, { HealthSortDir } from "@/components/SupplierTable";
 import DetailPanel from "@/components/DetailPanel";
 import Copilot from "@/components/Copilot";
 import LogoutButton from "@/components/LogoutButton";
-import { Supplier } from "@/lib/suppliers";
+import { Supplier, HEALTH_BAND_ORDER } from "@/lib/suppliers";
 import { NavView, RegionFilter, TierFilter, SeverityFilter } from "@/lib/types";
 
 const SEVERITY_TO_RISK: Record<string, Supplier["risk"]> = {
@@ -50,6 +50,7 @@ export default function HomeClient({ suppliers }: { suppliers: Supplier[] }) {
   const [severity, setSeverity] = useState<SeverityFilter>("All");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(suppliers[0]?.id ?? null);
+  const [healthSortDir, setHealthSortDir] = useState<HealthSortDir | null>(null);
 
   const commonFiltered = useMemo(() => {
     return suppliers.filter((s) => {
@@ -65,11 +66,30 @@ export default function HomeClient({ suppliers }: { suppliers: Supplier[] }) {
     });
   }, [suppliers, region, tier, severity, search]);
 
-  const filtered = useMemo(() => {
+  const navFiltered = useMemo(() => {
     if (navView === "alerts") return commonFiltered.filter((s) => s.alerts.length > 0);
     if (navView === "cert-expiry") return commonFiltered.filter((s) => s.alerts.some((a) => CERT_ALERT_PATTERN.test(a.title)));
     return commonFiltered;
   }, [navView, commonFiltered]);
+
+  const filtered = useMemo(() => {
+    // An explicit column-header sort always wins.
+    if (healthSortDir) {
+      const dirMultiplier = healthSortDir === "asc" ? 1 : -1;
+      return [...navFiltered].sort((a, b) => dirMultiplier * (a.health.score - b.health.score));
+    }
+    // Otherwise, the Alerts view defaults to Health band (Critical first), then alert
+    // count — so a hard-fail-overridden supplier always surfaces above one with more
+    // numerous but lower-severity alerts.
+    if (navView === "alerts") {
+      return [...navFiltered].sort((a, b) => {
+        const bandDiff = HEALTH_BAND_ORDER[a.health.band] - HEALTH_BAND_ORDER[b.health.band];
+        if (bandDiff !== 0) return bandDiff;
+        return b.alerts.length - a.alerts.length;
+      });
+    }
+    return navFiltered;
+  }, [navFiltered, navView, healthSortDir]);
 
   const selected = useMemo<Supplier | null>(() => {
     return filtered.find((s) => s.id === selectedId) ?? filtered[0] ?? null;
@@ -80,6 +100,10 @@ export default function HomeClient({ suppliers }: { suppliers: Supplier[] }) {
     if (v === "gri") {
       exportGriCsv(commonFiltered);
     }
+  }
+
+  function handleToggleHealthSort() {
+    setHealthSortDir((dir) => (dir === "desc" ? "asc" : "desc"));
   }
 
   const copy = VIEW_COPY[navView];
@@ -116,7 +140,13 @@ export default function HomeClient({ suppliers }: { suppliers: Supplier[] }) {
 
         <KpiRow />
 
-        <SupplierTable suppliers={filtered} selected={selected} onSelect={(s) => setSelectedId(s.id)} />
+        <SupplierTable
+          suppliers={filtered}
+          selected={selected}
+          onSelect={(s) => setSelectedId(s.id)}
+          healthSortDir={healthSortDir}
+          onToggleHealthSort={handleToggleHealthSort}
+        />
       </main>
 
       <DetailPanel supplier={selected} key={selected?.id ?? "empty"} />
