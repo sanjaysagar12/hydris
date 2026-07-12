@@ -9,7 +9,10 @@ import { ExtractDocumentsDto } from './dto/extract-documents.dto';
 import { ApplyExtractionDto } from './dto/apply-extraction.dto';
 
 const MAX_FILES = 5;
-const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
+// Files are converted to text (OCR/parsed) server-side before ever reaching
+// Gemini — see documents.service.ts — so this only bounds the browser-to-server
+// upload, not a base64 relay to a third party. Can be generous.
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')

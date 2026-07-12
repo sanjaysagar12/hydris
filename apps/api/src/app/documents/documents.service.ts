@@ -1,35 +1,48 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
 import { SuppliersService } from '../suppliers/suppliers.service';
 import { extractDocxText, extractXlsxText } from './office-document.util';
+import { extractImageText, extractPdfText } from './ocr.util';
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const MAX_OUTPUT_TOKENS = 2048;
 
-// Gemini reads these natively as inline binary data.
-const INLINE_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'text/plain'];
+// Kept as a safety net, but every file is now converted to text before
+// reaching Gemini (see below) — a network hiccup mid-request should be rare
+// now that requests are small, not the multi-megabyte base64 payloads this
+// was originally added to guard against.
+const GEMINI_TIMEOUT_MS = 90_000;
+const RETRYABLE_ERROR_PATTERN = /ECONNRESET|ETIMEDOUT|EPIPE|fetch failed|aborted/i;
+
+function isRetryableNetworkError(err: unknown): boolean {
+  const message = err instanceof Error ? `${err.message} ${String((err as { cause?: unknown }).cause ?? '')}` : String(err);
+  return RETRYABLE_ERROR_PATTERN.test(message);
+}
+
+const PDF_MIME_TYPE = 'application/pdf';
+const IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 const XLSX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-// These are converted to plain text server-side first (see office-document.util.ts) —
-// Gemini doesn't support Office Open XML formats as inline document input.
-const OFFICE_MIME_TYPES = [XLSX_MIME_TYPE, DOCX_MIME_TYPE];
-
 // CSV mimetypes are unreliable across browsers/exporters (text/csv,
 // application/vnd.ms-excel, or generic octet-stream) — read as raw text
-// rather than trusting inlineData's mimetype handling for it.
+// rather than trusting mimetype detection for it.
 const CSV_MIME_TYPES = ['text/csv', 'application/csv', 'application/vnd.ms-excel'];
 
-export const ACCEPTED_MIME_TYPES = [...INLINE_MIME_TYPES, ...OFFICE_MIME_TYPES, 'text/csv'];
+export const ACCEPTED_MIME_TYPES = [PDF_MIME_TYPE, ...IMAGE_MIME_TYPES, 'text/plain', XLSX_MIME_TYPE, DOCX_MIME_TYPE, 'text/csv'];
+
+type FileKind = 'pdf' | 'image' | 'text' | 'xlsx' | 'docx' | 'csv' | 'unsupported';
 
 /** Some browsers report .xlsx/.docx/.csv with generic or inconsistent mimetypes — fall back to the extension. */
-function classifyFile(mimetype: string, originalname: string): 'inline' | 'xlsx' | 'docx' | 'csv' | 'unsupported' {
+function classifyFile(mimetype: string, originalname: string): FileKind {
   const ext = originalname.split('.').pop()?.toLowerCase();
   if (mimetype === XLSX_MIME_TYPE || ext === 'xlsx') return 'xlsx';
   if (mimetype === DOCX_MIME_TYPE || ext === 'docx') return 'docx';
   if (ext === 'csv' || (CSV_MIME_TYPES.includes(mimetype) && ext !== 'xls')) return 'csv';
-  if (INLINE_MIME_TYPES.includes(mimetype)) return 'inline';
+  if (mimetype === PDF_MIME_TYPE || ext === 'pdf') return 'pdf';
+  if (IMAGE_MIME_TYPES.includes(mimetype)) return 'image';
+  if (mimetype === 'text/plain' || ext === 'txt') return 'text';
   return 'unsupported';
 }
 
@@ -43,7 +56,8 @@ RULES:
 5. "withdrawalLpd", "dischargeLpd", "reuseVolumeLpd" are water balance figures in liters/day — convert units if the source document uses m³/day, gallons/day, etc. (1 m³ = 1000 L).
 6. "auditDate" should be a human-readable date string as it appears in the source document (e.g. "12 Jun 2026"). "auditor" is the name of the auditing body, or "Self-reported" if the document is not from a third-party auditor.
 7. List any open findings, non-conformances, exceedances, or expiring certifications as entries in "alerts" — each with a short "title", a one-line "meta" description (include specific numbers/dates found), a "severity" ("Critical" for serious violations like banned chemicals or enforcement action, "Major" for threshold exceedances or tier downgrades, "Minor" for administrative items like upcoming renewals), and a "type" (use "chemical_exceedance", "data_anomaly", "enforcement_action", or "permit_expiry" when applicable, otherwise a short snake_case label of your choosing).
-8. Always include a "notes" field: 1-3 sentences summarizing what you found and which document each key value came from, so the admin can sanity-check before applying anything.`;
+8. Always include a "notes" field: 1-3 sentences summarizing what you found and which document each key value came from, so the admin can sanity-check before applying anything.
+9. Documents marked "(OCR'd from a scan/image)" were transcribed by optical character recognition and may contain misread characters or dropped words — if a value looks garbled or implausible (e.g. a nonsensical unit or an out-of-range score), omit it rather than guessing at the intended value, and mention the uncertainty in "notes".`;
 
 const RESPONSE_SCHEMA = {
   type: 'object',
@@ -136,6 +150,10 @@ export class DocumentsService {
 
     const supplier = await this.suppliersService.findOne(supplierId);
 
+    // Every file becomes a text part before it ever reaches Gemini — no binary
+    // upload to the model, however large the source file. This is what fixed
+    // the ECONNRESET-on-large-upload issue: the outbound request is now a few
+    // KB of text instead of tens of megabytes of base64.
     const fileParts = await Promise.all(
       files.map(async (f, i) => {
         const kind = kinds[i];
@@ -150,12 +168,22 @@ export class DocumentsService {
         if (kind === 'csv') {
           return { text: `--- ${f.originalname} (CSV) ---\n${f.buffer.toString('utf-8')}` };
         }
-        return { inlineData: { mimeType: f.mimetype, data: f.buffer.toString('base64') } };
+        if (kind === 'text') {
+          return { text: `--- ${f.originalname} ---\n${f.buffer.toString('utf-8')}` };
+        }
+        if (kind === 'image') {
+          const ocrText = await extractImageText(f.buffer);
+          return { text: `--- ${f.originalname} (OCR'd from a scan/image) ---\n${ocrText}` };
+        }
+        // pdf
+        const { text: pdfText, wasScanned } = await extractPdfText(f.buffer);
+        const label = wasScanned ? `${f.originalname} (OCR'd from a scan/image)` : f.originalname;
+        return { text: `--- ${label} ---\n${pdfText}` };
       }),
     );
 
     const genAI = this.getClient();
-    const response = await genAI.models.generateContent({
+    const request = {
       model: MODEL,
       contents: [
         {
@@ -173,8 +201,28 @@ export class DocumentsService {
         responseMimeType: 'application/json',
         responseJsonSchema: RESPONSE_SCHEMA,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
+        httpOptions: { timeout: GEMINI_TIMEOUT_MS },
       },
-    });
+    };
+
+    let response;
+    try {
+      response = await genAI.models.generateContent(request);
+    } catch (err) {
+      if (!isRetryableNetworkError(err)) throw err;
+      // One retry for a transient network blip (e.g. connection reset mid-upload)
+      // before giving up — most such failures don't repeat immediately.
+      try {
+        response = await genAI.models.generateContent(request);
+      } catch (retryErr) {
+        if (isRetryableNetworkError(retryErr)) {
+          throw new ServiceUnavailableException(
+            'The connection to the extraction service was interrupted while uploading — this is usually a transient network issue. Please try again, or with fewer/smaller files.',
+          );
+        }
+        throw retryErr;
+      }
+    }
 
     const text = response.text;
     if (!text) {
