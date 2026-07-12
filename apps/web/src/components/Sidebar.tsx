@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { NavView, REGIONS, RegionFilter, TIERS, TierFilter, SEVERITIES, SeverityFilter } from "@/lib/types";
 
 interface SidebarProps {
@@ -104,6 +105,13 @@ export default function Sidebar({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="nav-group">
+        <div className="nav-label">Tools</div>
+        <Link href="/admin/documents" className="nav-item" style={{ textDecoration: "none" }}>
+          Upload documents
+        </Link>
       </div>
 
       <div className="source-note">

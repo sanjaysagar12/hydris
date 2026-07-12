@@ -193,6 +193,7 @@ aside.detail{border-left:1px solid var(--line); padding:20px 16px; overflow-y:au
 .profile-wrap{max-width:980px; margin:0 auto; padding:26px 24px 80px;}
 
 .profile-topbar{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; gap:16px; flex-wrap:wrap;}
+.profile-topbar .sub{color:var(--text-dim); font-size:12.5px;}
 .breadcrumb{font-family:var(--mono); font-size:11px; color:var(--text-faint); margin-bottom:6px;}
 .breadcrumb span{color:var(--teal);}
 .profile-topbar h1{font-size:22px; font-weight:600; margin:0 0 4px;}
@@ -310,6 +311,31 @@ aside.detail{border-left:1px solid var(--line); padding:20px 16px; overflow-y:au
 
 ::-webkit-scrollbar{width:8px;}
 ::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+
+/* ---------- Document upload / extraction ---------- */
+.upload-field{display:flex; flex-direction:column; gap:6px; margin-bottom:16px;}
+.upload-field label{font-family:var(--mono); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-faint);}
+.upload-dropzone{
+  border:1px dashed var(--line); border-radius:8px; padding:18px; text-align:center;
+  color:var(--text-dim); font-size:12.5px; cursor:pointer; background:var(--panel-2);
+}
+.upload-dropzone:hover{border-color:var(--teal); color:var(--text);}
+.upload-dropzone input{display:none;}
+.upload-file-list{display:flex; flex-direction:column; gap:4px; margin-top:10px;}
+.upload-file-item{
+  display:flex; justify-content:space-between; align-items:center; background:var(--panel-2);
+  border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:11.5px; color:var(--text-dim);
+}
+.upload-file-item button{background:none; border:none; color:var(--text-faint); cursor:pointer; font-family:var(--mono); font-size:11px;}
+.upload-file-item button:hover{color:var(--brick);}
+.notes-callout{
+  background:var(--panel-2); border:1px dashed var(--teal-dim); border-radius:8px; padding:10px 14px;
+  font-size:12px; color:var(--text-dim); line-height:1.6; margin-bottom:16px;
+}
+.notes-callout b{color:var(--text);}
+.alert-check-row{display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;}
+.alert-check-row input[type="checkbox"]{margin-top:3px; accent-color:var(--teal);}
+.alert-check-row .p-alert-item{flex:1; margin-bottom:0;}
 
 @media (max-width: 1100px){
   .app{grid-template-columns:190px 1fr 280px;}
