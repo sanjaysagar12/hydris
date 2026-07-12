@@ -342,6 +342,15 @@ aside.detail{border-left:1px solid var(--line); padding:20px 16px; overflow-y:au
 .alert-check-row input[type="checkbox"]{margin-top:3px; accent-color:var(--teal);}
 .alert-check-row .p-alert-item{flex:1; margin-bottom:0;}
 
+/* ---------- PWI advisor chat (embedded, per-supplier) ---------- */
+.pa-wrap{margin-top:10px;}
+.pa-panel{
+  margin-top:8px; background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.pa-body{max-height:260px; padding:10px 12px;}
+.pa-suggest{padding:0 12px 10px;}
+
 @media (max-width: 1100px){
   .app{grid-template-columns:190px 1fr 280px;}
   .kpi-row{grid-template-columns:repeat(3,1fr);}

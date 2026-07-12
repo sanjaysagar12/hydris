@@ -12,6 +12,7 @@ import {
   TierTrend,
   AwsStatus,
 } from './plant-health.util';
+import { computePwiScore } from './pwi.util';
 
 const SAFE_INCLUDE = {
   alerts: { select: { id: true, title: true, meta: true, severity: true, type: true, createdAt: true } },
@@ -35,9 +36,11 @@ export class SuppliersService {
       higg: number;
       higgAvg: number;
       auditor: string;
+      pwiQuality: string;
       alerts: { severity: string; type: string; createdAt: Date }[];
     },
   >(supplier: T) {
+    const asOf = new Date();
     return {
       ...supplier,
       withdrawal: formatLpd(supplier.withdrawalLpd),
@@ -60,7 +63,20 @@ export class SuppliersService {
             openedAt: a.createdAt,
           })),
         },
-        new Date(),
+        asOf,
+      ),
+      pwi: computePwiScore(
+        {
+          tier: supplier.tier as MrslTier,
+          aws: supplier.aws as AwsStatus,
+          pwiQuality: supplier.pwiQuality,
+          alerts: supplier.alerts.map((a) => ({
+            severity: a.severity as AlertSeverity,
+            type: a.type,
+            openedAt: a.createdAt,
+          })),
+        },
+        asOf,
       ),
     };
   }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Supplier, tierLabel, healthBadgeClass, PlantHealth } from "@/lib/suppliers";
+import { Supplier, tierLabel, healthBadgeClass, PlantHealth, pwiBadgeClass, Pwi } from "@/lib/suppliers";
+import PwiAdvisorChat from "@/components/pwi-advisor/PwiAdvisorChat";
 
 interface DetailPanelProps {
   supplier: Supplier | null;
@@ -25,10 +26,18 @@ const HEALTH_COMPONENT_LABELS: Record<keyof PlantHealth["breakdown"], string> = 
   peerRelative: "Peer-relative Higg performance",
 };
 
+const PWI_COMPONENT_LABELS: Record<keyof Pwi["breakdown"], string> = {
+  tierScore: "Tier Score (MRSL conformance)",
+  permitScore: "Permit Score (AWS + permit alerts)",
+  waterQualityScore: "Water Quality Score (WQBA index)",
+  correctiveActionScore: "Corrective Action Score (alert burden)",
+};
+
 export default function DetailPanel({ supplier }: DetailPanelProps) {
   const [availOpen, setAvailOpen] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
   const [healthOpen, setHealthOpen] = useState(false);
+  const [pwiOpen, setPwiOpen] = useState(false);
 
   if (!supplier) {
     return (
@@ -109,7 +118,33 @@ export default function DetailPanel({ supplier }: DetailPanelProps) {
       <div className="d-section">
         <div className="d-section-title">PWI contribution (WQBA output)</div>
 
-        <div className="pwi-card">
+        <div className="d-row">
+          <span className="k">PWI score</span>
+          <span className="v">
+            <span className={`health-badge ${pwiBadgeClass(s.pwi.band)}`}>{s.pwi.band}</span>
+            {" "}{s.pwi.score} / 100
+          </span>
+        </div>
+        <button type="button" className="audit-toggle" onClick={() => setPwiOpen((o) => !o)}>
+          {pwiOpen ? "▾ hide score breakdown" : "▸ view score breakdown"}
+        </button>
+        <div className={`audit-trail${pwiOpen ? " open" : ""}`}>
+          {(Object.keys(s.pwi.breakdown) as (keyof Pwi["breakdown"])[]).map((key) => {
+            const component = s.pwi.breakdown[key];
+            return (
+              <div key={key} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span>{PWI_COMPONENT_LABELS[key]}</span>
+                <span>
+                  {component.value.toFixed(1)} × {component.weight} = {component.contribution.toFixed(1)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <PwiAdvisorChat key={s.id} supplierId={s.id} supplierName={s.name} />
+
+        <div className="pwi-card" style={{ marginTop: 14 }}>
           <div className="pwi-top"><span className="pwi-name">Availability</span><span className="pwi-val">{s.pwiAvail}</span></div>
           <div className="pwi-conf">confidence {s.pwiConf}</div>
           <button type="button" className="audit-toggle" onClick={() => setAvailOpen((o) => !o)}>

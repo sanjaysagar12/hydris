@@ -50,6 +50,33 @@ export function healthBadgeClass(band: PlantHealthBand): string {
   return "health-critical";
 }
 
+/** Mirrors the API's PwiResult (apps/api/src/app/suppliers/pwi.util.ts). */
+export type PwiBand = "Strong" | "Adequate" | "Needs Improvement" | "Weak";
+
+export interface PwiComponent {
+  value: number;
+  weight: number;
+  contribution: number;
+}
+
+export interface Pwi {
+  score: number;
+  band: PwiBand;
+  breakdown: {
+    tierScore: PwiComponent;
+    permitScore: PwiComponent;
+    waterQualityScore: PwiComponent;
+    correctiveActionScore: PwiComponent;
+  };
+}
+
+export function pwiBadgeClass(band: PwiBand): string {
+  if (band === "Strong") return "health-healthy";
+  if (band === "Adequate") return "health-watch";
+  if (band === "Needs Improvement") return "health-at-risk";
+  return "health-critical";
+}
+
 export interface Supplier {
   id: string;
   name: string;
@@ -80,6 +107,7 @@ export interface Supplier {
   auditDate: string;
   auditor: string;
   health: PlantHealth;
+  pwi: Pwi;
 }
 
 /** Fields a supplier may edit on their own profile — mirrors the API's UpdateOwnSupplierDto. */

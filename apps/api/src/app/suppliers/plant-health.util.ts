@@ -46,7 +46,9 @@ export interface PlantHealthResult {
 const COMPLIANCE_BASE: Record<MrslTier, number> = { 'Level 1': 30, 'Level 2': 65, 'Level 3': 95 };
 const TRAJECTORY: Record<TierTrend, number> = { up: 100, flat: 60, down: 10 };
 const GOVERNANCE: Record<AwsStatus, number> = { Platinum: 100, Gold: 85, Core: 60, Uncertified: 20 };
-const SEVERITY_WEIGHT: Record<AlertSeverity, number> = { Critical: 40, Major: 25, Minor: 10 };
+
+/** Exported so other composite scores (e.g. pwi.util.ts's Corrective Action Score) can weigh open alerts the same way, rather than re-deriving their own notion of "how bad is an open alert". */
+export const SEVERITY_WEIGHT: Record<AlertSeverity, number> = { Critical: 40, Major: 25, Minor: 10 };
 
 const TRUST_CAP = 70;
 const WEIGHTS = {
@@ -57,15 +59,15 @@ const WEIGHTS = {
   peerRelative: 0.15,
 } as const;
 
-function clamp(value: number, min: number, max: number): number {
+export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function ageInDays(openedAt: Date, asOf: Date): number {
+export function ageInDays(openedAt: Date, asOf: Date): number {
   return Math.floor((asOf.getTime() - openedAt.getTime()) / (24 * 60 * 60 * 1000));
 }
 
-function ageFactor(days: number): number {
+export function ageFactor(days: number): number {
   if (days < 7) return 1.0;
   if (days <= 30) return 1.3;
   return 1.6;
