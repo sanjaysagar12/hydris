@@ -56,6 +56,8 @@ export default function DetailPanel({ supplier }: DetailPanelProps) {
         <div className="d-loc">{s.loc} · {s.basin}</div>
       </div>
 
+      <PwiAdvisorChat key={s.id} supplierId={s.id} supplierName={s.name} />
+
       <div className="d-section">
         <div className="d-section-title">Plant Health</div>
         <div className="d-row">
@@ -141,8 +143,6 @@ export default function DetailPanel({ supplier }: DetailPanelProps) {
             );
           })}
         </div>
-
-        <PwiAdvisorChat key={s.id} supplierId={s.id} supplierName={s.name} />
 
         <div className="pwi-card" style={{ marginTop: 14 }}>
           <div className="pwi-top"><span className="pwi-name">Availability</span><span className="pwi-val">{s.pwiAvail}</span></div>

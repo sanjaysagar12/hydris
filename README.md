@@ -8,6 +8,58 @@
 
 🚀 If you haven't connected to Nx Cloud yet, [complete your setup here](https://cloud.nx.app/get-started). Get faster builds with remote caching, distributed task execution, and self-healing CI. [See how your workspace can benefit](#nx-cloud).
 
+## Supplier scoring
+
+### Plant Health
+
+Plant Health is the backend score used to summarize whether a supplier is operating well right now. It is calculated in `apps/api/src/app/suppliers/plant-health.util.ts` from five weighted components:
+
+$$
+PlantHealth = 0.35 \times complianceBase + 0.10 \times trajectory + 0.25 \times alertBurden + 0.15 \times governance + 0.15 \times peerRelative
+$$
+
+Component definitions:
+
+- `complianceBase`: MRSL tier score
+	- Level 1 = 30
+	- Level 2 = 65
+	- Level 3 = 95
+- `trajectory`: tier trend score
+	- up = 100
+	- flat = 60
+	- down = 10
+- `alertBurden`: open-alert penalty score
+	- starts at 100
+	- subtracts `severity weight × age factor` for each open alert
+	- severity weights: Critical = 40, Major = 25, Minor = 10
+	- age factors: under 7 days = 1.0, 7 to 30 days = 1.3, over 30 days = 1.6
+- `governance`: AWS certification score
+	- Uncertified = 20
+	- Core = 60
+	- Gold = 85
+	- Platinum = 100
+- `peerRelative`: Higg performance vs peer average
+	- `50 + (higg - higgPeerAvg) × 2`
+	- clamped to the 0 to 100 range
+
+Rules applied after the weighted score is computed:
+
+- If the supplier is self-reported, the score is capped at 70.
+- If there is an open hard-fail alert, the band is forced to `Critical`.
+- Hard-fail conditions are checked in this order:
+	- a Critical alert open more than 10 days
+	- any open `data_anomaly` alert
+	- any open `enforcement_action` alert
+
+Band thresholds:
+
+- 80 or above = `Healthy`
+- 60 to 79.9 = `Watch`
+- 40 to 59.9 = `At Risk`
+- below 40 = `Critical`
+
+The frontend in `apps/web` displays the backend result and breakdown; it does not recompute the authoritative score.
+
 ## Generate a library
 
 ```sh

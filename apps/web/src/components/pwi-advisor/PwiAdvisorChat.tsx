@@ -72,8 +72,9 @@ export default function PwiAdvisorChat({ supplierId, supplierName }: { supplierI
 
   return (
     <div className="pa-wrap">
-      <button type="button" className="audit-toggle" onClick={() => setOpen((o) => !o)}>
-        {open ? "▾ hide PWI advisor" : `▸ ask AI how to improve ${supplierName}'s PWI`}
+      <button type="button" className={`ai-trigger-btn${open ? " open" : ""}`} onClick={() => setOpen((o) => !o)}>
+        <span className="ai-trigger-icon">✦</span>
+        {open ? "Hide AI advisor" : "Ask AI"}
       </button>
       {open && (
         <div className="pa-panel">
