@@ -15,7 +15,35 @@
       "Bash(rm -f /tmp/cookies_stale2.txt)",
       "Bash(cp /tmp/cookies_stale.txt /tmp/cookies_stale2.txt)",
       "Bash(curl -s -c /tmp/cookies_stale2.txt -b /tmp/cookies_stale2.txt -o /dev/null -w \"1\\) / -> %{http_code} %{redirect_url}\\\\n\" http://localhost:3000/)",
-      "Bash(curl -s -c /tmp/cookies_stale2.txt -b /tmp/cookies_stale2.txt -o /dev/null -w \"2\\) /api/auth/invalidate -> %{http_code} %{redirect_url}\\\\n\" http://localhost:3000/api/auth/invalidate)"
+      "Bash(curl -s -c /tmp/cookies_stale2.txt -b /tmp/cookies_stale2.txt -o /dev/null -w \"2\\) /api/auth/invalidate -> %{http_code} %{redirect_url}\\\\n\" http://localhost:3000/api/auth/invalidate)",
+      "Bash(mkdir -p \"c:/ai-db-agent/backend/src/database\" \"c:/ai-db-agent/backend/src/routes\" \"c:/ai-db-agent/backend/src/services\" \"c:/ai-db-agent/backend/src/utils\" \"c:/ai-db-agent/backend/data\")",
+      "Bash(mkdir -p \"c:/ai-db-agent/frontend/src/components\" \"c:/ai-db-agent/frontend/src/services\" \"c:/ai-db-agent/frontend/src/store\" \"c:/ai-db-agent/frontend/public\")",
+      "Read(//c//**)",
+      "Bash(node -e ' *)",
+      "Read(//c/ai-db-agent/backend/**)",
+      "Bash(nohup node src/server.js)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const v=JSON.parse\\(d\\);console.log\\(v.slice\\(-15\\)\\)}\\)\")",
+      "Bash(cd c:/ai-db-agent/frontend && npm install 2>&1 | tail -40)",
+      "Read(//c/ai-db-agent/frontend/**)",
+      "Bash(cd c:/ai-db-agent/frontend && npx tsc --noEmit 2>&1)",
+      "Bash(echo \"exit code: $?\")",
+      "Bash(cd c:/ai-db-agent/frontend && npm run build 2>&1)",
+      "Bash(nohup npm run dev)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(curl -s -X POST http://localhost:5173/api/ask -H \"Content-Type: application/json\" -d '{\"question\":\"test\"}')",
+      "Bash(curl -s -X POST http://localhost:5173/api/reset -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5000/)",
+      "Bash(curl -s http://localhost:5000/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5000/some/client/route)",
+      "Bash(curl -s http://localhost:5000/api/health)"
+    ],
+    "additionalDirectories": [
+      "c:\\ai-db-agent\\backend\\src\\utils",
+      "c:\\ai-db-agent\\backend\\src\\database",
+      "c:\\ai-db-agent\\backend\\src\\services",
+      "c:\\ai-db-agent\\backend",
+      "c:\\ai-db-agent\\frontend",
+      "c:\\ai-db-agent"
     ]
   },
   "enabledPlugins": {
