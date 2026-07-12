@@ -138,6 +138,11 @@ aside.detail{border-left:1px solid var(--line); padding:20px 16px; overflow-y:au
 .d-row .v{font-family:var(--mono); font-weight:500; text-align:right;}
 .d-row .v.link{color:var(--teal); cursor:pointer; text-decoration:underline dotted;}
 
+/* ---------- Version-control-style diff preview (document upload review step) ---------- */
+.diff-old{color:var(--text-faint); text-decoration:line-through; margin-right:6px;}
+.diff-arrow{color:var(--text-faint); margin-right:6px;}
+.diff-new{background:var(--sage-dim); color:#B9DBC4; padding:1px 7px; border-radius:4px; font-weight:600;}
+
 .pwi-card{background:var(--panel-2); border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin-bottom:8px;}
 .pwi-top{display:flex; justify-content:space-between; align-items:baseline;}
 .pwi-name{font-size:12px; color:var(--text-dim);}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { Supplier } from "@/lib/suppliers";
 
@@ -51,6 +51,26 @@ const EMPTY_FORM: FormState = {
   auditDate: "", auditor: "", withdrawalLpd: "", dischargeLpd: "", reuseVolumeLpd: "",
 };
 
+/** Maps each editable form field to the current-record field it will overwrite, for the diff preview. */
+const FIELD_DEFS: { key: keyof FormState; label: string; currentKey: keyof Supplier }[] = [
+  { key: "tier", label: "MRSL conformance", currentKey: "tier" },
+  { key: "tierTrend", label: "Tier trend", currentKey: "tierTrend" },
+  { key: "aws", label: "AWS certification", currentKey: "aws" },
+  { key: "higg", label: "Higg FEM score", currentKey: "higg" },
+  { key: "riskScore", label: "Basin risk score", currentKey: "riskScore" },
+  { key: "auditDate", label: "Last audit date", currentKey: "auditDate" },
+  { key: "auditor", label: "Auditor", currentKey: "auditor" },
+  { key: "withdrawalLpd", label: "Withdrawal (L/day)", currentKey: "withdrawalLpd" },
+  { key: "dischargeLpd", label: "Discharge (L/day)", currentKey: "dischargeLpd" },
+  { key: "reuseVolumeLpd", label: "Reused internally (L/day)", currentKey: "reuseVolumeLpd" },
+];
+
+interface DiffRow {
+  label: string;
+  oldValue: string;
+  newValue: string;
+}
+
 type Stage = "select" | "review" | "done";
 
 function formatBytes(bytes: number): string {
@@ -70,6 +90,19 @@ export default function DocumentUploadClient({ suppliers }: { suppliers: Supplie
   const [alertsIncluded, setAlertsIncluded] = useState<boolean[]>([]);
 
   const selectedSupplier = suppliers.find((s) => s.id === supplierId) ?? null;
+
+  const diffRows = useMemo<DiffRow[]>(() => {
+    if (!selectedSupplier) return [];
+    return FIELD_DEFS.flatMap((def) => {
+      const raw = form[def.key];
+      if (!raw) return []; // blank = "leave unchanged", nothing to diff
+      const currentValue = String(selectedSupplier[def.currentKey]);
+      if (raw === currentValue) return [];
+      return [{ label: def.label, oldValue: currentValue, newValue: raw }];
+    });
+  }, [form, selectedSupplier]);
+
+  const newAlertsToAdd = (extracted?.alerts ?? []).filter((_, i) => alertsIncluded[i]);
 
   function handleFilesChange(e: ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files ?? []);
@@ -315,9 +348,37 @@ export default function DocumentUploadClient({ suppliers }: { suppliers: Supplie
             </>
           )}
 
+          <div className="d-section" style={{ marginTop: 18 }}>
+            <div className="d-section-title">Changes to apply</div>
+            {diffRows.length === 0 && newAlertsToAdd.length === 0 ? (
+              <div style={{ color: "var(--text-faint)", fontSize: 12.5 }}>
+                No changes yet — edit the fields above, or nothing will be written to the database.
+              </div>
+            ) : (
+              <>
+                {diffRows.map((row) => (
+                  <div className="d-row" key={row.label}>
+                    <span className="k">{row.label}</span>
+                    <span className="v">
+                      <span className="diff-old">{row.oldValue}</span>
+                      <span className="diff-arrow">→</span>
+                      <span className="diff-new">{row.newValue}</span>
+                    </span>
+                  </div>
+                ))}
+                {newAlertsToAdd.map((a, i) => (
+                  <div className="d-row" key={`${a.title}-${i}`}>
+                    <span className="k">New alert</span>
+                    <span className="v"><span className="diff-new">+ {a.title}</span></span>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+
           <div className="profile-btn-row" style={{ marginTop: 16 }}>
             <button type="button" className="mode-btn" onClick={reset} disabled={loading}>✕ Start over</button>
-            <button type="button" className="save-btn" onClick={handleApply} disabled={loading}>
+            <button type="button" className="save-btn" onClick={handleApply} disabled={loading || (diffRows.length === 0 && newAlertsToAdd.length === 0)}>
               {loading ? "Applying…" : "✓ Apply to database"}
             </button>
           </div>

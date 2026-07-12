@@ -1,11 +1,17 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
 import { SuppliersService } from '../suppliers/suppliers.service';
 import { extractDocxText, extractXlsxText } from './office-document.util';
 import { extractImageText, extractPdfText } from './ocr.util';
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const MAX_OUTPUT_TOKENS = 2048;
+// gemini-2.5-flash's "thinking" tokens are drawn from this same budget by
+// default — a tight limit combined with thinking left on means the model can
+// burn most/all of it on internal reasoning and leave the actual JSON
+// response truncated mid-structure (an unparseable partial object). This is
+// a plain structured-extraction task with no need for extended reasoning, so
+// thinking is disabled below and the budget is sized for output text alone.
+const MAX_OUTPUT_TOKENS = 4096;
 
 // Kept as a safety net, but every file is now converted to text before
 // reaching Gemini (see below) — a network hiccup mid-request should be rare
@@ -120,6 +126,7 @@ export interface UploadedDocument {
 
 @Injectable()
 export class DocumentsService {
+  private readonly logger = new Logger(DocumentsService.name);
   private client: GoogleGenAI | null = null;
 
   constructor(private readonly suppliersService: SuppliersService) {}
@@ -202,6 +209,8 @@ export class DocumentsService {
         responseJsonSchema: RESPONSE_SCHEMA,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         httpOptions: { timeout: GEMINI_TIMEOUT_MS },
+        // Disabled — see the MAX_OUTPUT_TOKENS comment above.
+        thinkingConfig: { thinkingBudget: 0 },
       },
     };
 
@@ -224,14 +233,36 @@ export class DocumentsService {
       }
     }
 
+    const finishReason = response.candidates?.[0]?.finishReason;
     const text = response.text;
+
     if (!text) {
+      if (finishReason === 'MAX_TOKENS') {
+        this.logger.warn(`Extraction hit MAX_TOKENS with no output text (supplier ${supplierId}).`);
+        throw new BadRequestException(
+          'The extraction ran out of response space before producing any output — try uploading fewer documents at once.',
+        );
+      }
       throw new BadRequestException('The model returned no extractable data — try clearer scans or a different document.');
     }
 
+    if (finishReason === 'MAX_TOKENS') {
+      this.logger.warn(`Extraction hit MAX_TOKENS with partial output (supplier ${supplierId}): ${text.slice(0, 500)}`);
+      throw new BadRequestException(
+        'The extraction response was cut off before it finished — try uploading fewer documents at a time, or documents with fewer findings.',
+      );
+    }
+
+    // Defensive: models occasionally wrap JSON in a markdown code fence even
+    // when responseMimeType is set to application/json.
+    const jsonText = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+
     try {
-      return JSON.parse(text) as ExtractedFields;
-    } catch {
+      return JSON.parse(jsonText) as ExtractedFields;
+    } catch (err) {
+      this.logger.warn(
+        `Failed to parse extraction output (supplier ${supplierId}, finishReason=${finishReason}): ${(err as Error).message} | raw: ${text.slice(0, 500)}`,
+      );
       throw new BadRequestException('Could not parse the extracted data — please try again.');
     }
   }
