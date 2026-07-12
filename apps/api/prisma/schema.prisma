@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Supplier {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String
+
+  name   String
+  loc    String
+  region String
+
+  // Basin-level risk context — system/admin managed, not supplier-editable.
+  risk      String @default("low")
+  riskScore String @default("0")
+  riskSrc   String @default("Pending")
+  basin     String @default("Not reported")
+
+  // Compliance status — supplier-editable (self-reported).
+  tier      String @default("Level 1")
+  tierTrend String @default("flat")
+  tierFrom  String @default("Level 1")
+  aws       String @default("Uncertified")
+  higg      Int    @default(0)
+  higgAvg   Int    @default(0)
+  auditDate String @default("Not yet audited")
+  auditor   String @default("Not yet audited")
+
+  // Water balance, in liters/day — supplier-editable, raw numbers.
+  withdrawalLpd  Int @default(0)
+  dischargeLpd   Int @default(0)
+  reuseVolumeLpd Int @default(0)
+
+  // PWI (WQBA engine output) — recomputed server-side from the water balance
+  // above, never accepted directly from a client.
+  pwiAvail   String @default("Not assessed")
+  pwiConf    String @default("Not assessed")
+  pwiQuality String @default("Not assessed")
+  pwiQConf   String @default("Not assessed")
+  pwiAccess  String @default("Not assessed")
+
+  alerts    SupplierAlert[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model SupplierAlert {
+  id         String   @id @default(cuid())
+  title      String
+  meta       String
+  createdAt  DateTime @default(now())
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierId String
+}

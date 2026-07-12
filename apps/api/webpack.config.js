@@ -9,6 +9,7 @@ module.exports = {
       devtoolModuleFilenameTemplate: '[absolute-resource-path]',
     }),
   },
+  externals: [/^@prisma\/client$/, /^\.prisma\/client/],
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',

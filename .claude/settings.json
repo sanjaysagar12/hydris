@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(cat /tmp/cookies_supplier.txt)",
+      "Read(//tmp/**)",
+      "Bash(rm -f /tmp/cookies_supplier.txt /tmp/cookies_admin.txt)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} -> %{redirect_url}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -c /tmp/cookies_supplier.txt -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"anchor-dye-works@example.com\",\"password\":\"Password123!\"}' -o /dev/null -w \"login: %{http_code}\\\\n\")",
+      "Bash(curl -s -b /tmp/cookies_supplier.txt -o /dev/null -w \"profile page: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -c /tmp/cookies_admin.txt -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@hydris.local\",\"password\":\"ChangeMe123!\"}' -o /dev/null -w \"login: %{http_code}\\\\n\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/api/hello -b /tmp/cookies_admin.txt)",
+      "Bash(rm -f /tmp/cookies_fresh.txt)",
+      "Bash(curl -s -c /tmp/cookies_fresh.txt -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"anchor-dye-works@example.com\",\"password\":\"Password123!\"}')",
+      "Bash(curl -s -b /tmp/cookies_fresh.txt -o /dev/null -w \"profile page with fresh login: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(rm -f /tmp/cookies_stale2.txt)",
+      "Bash(cp /tmp/cookies_stale.txt /tmp/cookies_stale2.txt)",
+      "Bash(curl -s -c /tmp/cookies_stale2.txt -b /tmp/cookies_stale2.txt -o /dev/null -w \"1\\) / -> %{http_code} %{redirect_url}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -c /tmp/cookies_stale2.txt -b /tmp/cookies_stale2.txt -o /dev/null -w \"2\\) /api/auth/invalidate -> %{http_code} %{redirect_url}\\\\n\" http://localhost:3000/api/auth/invalidate)"
+    ]
+  },
+  "enabledPlugins": {
+    "nx@nx-claude-plugins": true
+  },
   "extraKnownMarketplaces": {
     "nx-claude-plugins": {
       "source": {
@@ -7,12 +29,11 @@
       }
     }
   },
-  "enabledPlugins": {
-    "nx@nx-claude-plugins": true
-  },
   "sandbox": {
     "network": {
-      "allowedDomains": ["www.google-analytics.com"]
+      "allowedDomains": [
+        "www.google-analytics.com"
+      ]
     }
   }
 }

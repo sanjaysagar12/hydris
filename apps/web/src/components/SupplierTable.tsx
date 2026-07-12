@@ -43,8 +43,8 @@ export default function SupplierTable({ suppliers, selected, onSelect }: Supplie
           )}
           {suppliers.map((s) => (
             <tr
-              key={s.name}
-              className={selected?.name === s.name ? "selected" : ""}
+              key={s.id}
+              className={selected?.id === s.id ? "selected" : ""}
               onClick={() => onSelect(s)}
             >
               <td>

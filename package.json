@@ -50,8 +50,6 @@
   },
   "workspaces": [
     "packages/*",
-    "api",
-    "api-e2e",
     "apps/*"
   ],
   "dependencies": {

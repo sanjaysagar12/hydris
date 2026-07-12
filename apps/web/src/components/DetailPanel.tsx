@@ -90,8 +90,8 @@ export default function DetailPanel({ supplier }: DetailPanelProps) {
       <div className="d-section">
         <div className="d-section-title">Open alerts</div>
         {s.alerts.length ? (
-          s.alerts.map((a, i) => (
-            <div className="alert-item" key={i}>
+          s.alerts.map((a) => (
+            <div className="alert-item" key={a.id}>
               <div className="a-title">{a.title}</div>
               <div className="a-meta">{a.meta}</div>
             </div>
